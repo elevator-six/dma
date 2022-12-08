@@ -26,7 +26,7 @@ struct ref_def_t {
 
 ref_def_t ref_def;
 
-namespace GameGlobals 
+namespace GameGlobals
 {
 	uint64_t process_peb  = 0;
 	uint64_t module_base  = 0;
@@ -125,14 +125,6 @@ nameentry_t GameFunctions::get_name_entry(uint32_t index)
 	return ret;
 }
 
-uint32_t GameFunctions::get_stance(player_t entity)
-{
-        int stance;
-        k_memory.Read<int>((uint64_t)&entity + offsets::player::stance, stance);
-        printf("stance: %i \n", stance);
-        return stance;
-}
-
 uint64_t GameFunctions::get_client_info()
 {
 	return GameGlobals::client_base;
@@ -216,6 +208,14 @@ Vector player_t::get_pos()
 	k_memory.Read<Vector>(local_pos + 0x48, ret);
 	return ret;
 }
+
+int player_t::get_stance()
+{
+	int ret;
+	k_memory.Read<int>(address + offsets::player::stance, ret);
+	return ret;
+}
+
 uintptr_t GameDecrypts::decrypt_client_info()
 {
         const uint64_t mb = GameGlobals::module_base;

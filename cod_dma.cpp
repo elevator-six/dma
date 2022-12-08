@@ -123,13 +123,12 @@ static void EspLoop()
 				if (!entity.is_valid() || entity.is_dead())
 					continue;
 
-				GameFunctions::get_stance(entity);
-
 				int local_team = local.team_id();
 				if (entity.team_id() == local_team)
 					continue;
 
 				Vector pos = entity.get_pos();
+				int player_stance = entity.get_stance();
 
 				nameentry_t local_name_entry = GameFunctions::get_name_entry(i);
 
@@ -138,6 +137,9 @@ static void EspLoop()
 				if (GameFunctions::world_to_screen(head_pos, &head_pos_out) && GameFunctions::world_to_screen(root_pos, &root_pos_out)) {
 					Vector local_pos = local.get_pos();
 					float dist = units_to_m(local_pos.DistTo(root_pos));
+
+					if (player_stance == 16)
+						printf(" Stance, player knocked: %d", player_stance);
 
 					Vector2D hs = head_pos_out;
 					Vector2D HeadPosition = head_pos_out;

@@ -41,6 +41,7 @@ public:
 	bool is_dead();
 	int team_id();
 	Vector get_pos();
+	int get_stance();
 };
 
 namespace GameFunctions
@@ -50,8 +51,6 @@ namespace GameFunctions
 	bool world_to_screen(const Vector& world_pos, Vector2D* screen_pos);
 	bool t__world_to_screen(const Vector& world_pos, Vector2D* screen_pos);
 	nameentry_t get_name_entry(uint32_t index);
-
-	uint32_t get_stance(player_t entity);
 
 	uint64_t get_client_info();
 	uint64_t get_ref_def();
