@@ -41,7 +41,6 @@ public:
 	bool is_dead();
 	int team_id();
 	Vector get_pos();
-	int get_stance();
 };
 
 namespace GameFunctions

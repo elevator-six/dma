@@ -33,8 +33,11 @@ namespace GameGlobals
 	uintptr_t module_size = 0;
 
 	uint64_t client       = 0;
-	uint64_t c_bone	  	  = 0;
+	uint64_t c_bone	      = 0;
 	uint64_t client_base  = 0;
+
+        uintptr_t currentvisoffset = 0;
+        uintptr_t last_visible_offset = 0;
 
 	namespace Cache
 	{
@@ -209,18 +212,11 @@ Vector player_t::get_pos()
 	return ret;
 }
 
-int player_t::get_stance()
-{
-	int ret;
-	k_memory.Read<int>(address + offsets::player::stance, ret);
-	return ret;
-}
-
 uintptr_t GameDecrypts::decrypt_client_info()
 {
         const uint64_t mb = GameGlobals::module_base;
         uint64_t rax = mb, rbx = mb, rcx = mb, rdx = mb, rdi = mb, rsi = mb, r8 = mb, r9 = mb, r10 = mb, r11 = mb, r12 = mb, r13 = mb, r14 = mb, r15 = mb;
-        rbx = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0x130AD1E8);
+        rbx = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0x13053268);
         if(!rbx)
                 return rbx;
         rdx= ~GameGlobals::process_peb;              //mov rdx, gs:[rax]
@@ -229,7 +225,7 @@ uintptr_t GameDecrypts::decrypt_client_info()
         rcx = 0;                //and rcx, 0xFFFFFFFFC0000000
         rbx ^= rax;             //xor rbx, rax
         rcx = rotl64(rcx, 0x10);               //rol rcx, 0x10
-        rcx ^= k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA1840E3);             //xor rcx, [0x00000000081983B0]
+        rcx ^= k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A0E3);             //xor rcx, [0x00000000081983B0]
         rax = GameGlobals::module_base + 0x1343C359;              //lea rax, [0x000000001145061F]
         rbx += rdx;             //add rbx, rdx
         rcx = ~rcx;             //not rcx
@@ -257,7 +253,7 @@ uintptr_t GameDecrypts::decrypt_client_base()
         case 0:
         {
                 rbx = GameGlobals::module_base;           //lea rbx, [0xFFFFFFFFFE036AED]
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184129);              //mov r10, [0x00000000081BABAC]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A129);              //mov r10, [0x00000000081BABAC]
                 rax = rdx;              //mov rax, rdx
                 rax >>= 0x7;            //shr rax, 0x07
                 rdx ^= rax;             //xor rdx, rax
@@ -295,7 +291,7 @@ uintptr_t GameDecrypts::decrypt_client_base()
         }
         case 1:
         {
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184129);              //mov r10, [0x00000000081BA775]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A129);              //mov r10, [0x00000000081BA775]
                 rbx = GameGlobals::module_base;           //lea rbx, [0xFFFFFFFFFE036645]
                 rdx -= r11;             //sub rdx, r11
                 rax = GameGlobals::module_base + 0x6B3C0100;              //lea rax, [0x00000000693F6656]
@@ -322,7 +318,7 @@ uintptr_t GameDecrypts::decrypt_client_base()
         case 2:
         {
                 rbx = GameGlobals::module_base;           //lea rbx, [0xFFFFFFFFFE0361CB]
-                rcx = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184129);              //mov rcx, [0x00000000081BA275]
+                rcx = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A129);              //mov rcx, [0x00000000081BA275]
                 rax = 0xD511FD9CF85D2C07;               //mov rax, 0xD511FD9CF85D2C07
                 rdx *= rax;             //imul rdx, rax
                 rdx ^= r11;             //xor rdx, r11
@@ -351,7 +347,7 @@ uintptr_t GameDecrypts::decrypt_client_base()
         }
         case 3:
         {
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184129);              //mov r10, [0x00000000081B9ED9]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A129);              //mov r10, [0x00000000081B9ED9]
                 rbx = GameGlobals::module_base;           //lea rbx, [0xFFFFFFFFFE035DA9]
                 rax = rbx + 0x1771cb1b;                 //lea rax, [rbx+0x1771CB1B]
                 rax += r11;             //add rax, r11
@@ -388,7 +384,7 @@ uintptr_t GameDecrypts::decrypt_client_base()
         case 4:
         {
                 rbx = GameGlobals::module_base;           //lea rbx, [0xFFFFFFFFFE0357D8]
-                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184129);               //mov r9, [0x00000000081B9890]
+                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A129);               //mov r9, [0x00000000081B9890]
                 rax = 0;                //and rax, 0xFFFFFFFFC0000000
                 rax = rotl64(rax, 0x10);               //rol rax, 0x10
                 rax ^= r9;              //xor rax, r9
@@ -419,7 +415,7 @@ uintptr_t GameDecrypts::decrypt_client_base()
         }
         case 5:
         {
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184129);              //mov r10, [0x00000000081B93D9]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A129);              //mov r10, [0x00000000081B93D9]
                 rbx = GameGlobals::module_base;           //lea rbx, [0xFFFFFFFFFE0352A9]
                 rax = rdx;              //mov rax, rdx
                 rax >>= 0x17;           //shr rax, 0x17
@@ -450,7 +446,7 @@ uintptr_t GameDecrypts::decrypt_client_base()
         }
         case 6:
         {
-                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184129);               //mov r9, [0x00000000081B8F58]
+                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A129);               //mov r9, [0x00000000081B8F58]
                 rdx -= r11;             //sub rdx, r11
                 rax = rdx;              //mov rax, rdx
                 rax >>= 0x12;           //shr rax, 0x12
@@ -484,7 +480,7 @@ uintptr_t GameDecrypts::decrypt_client_base()
         case 7:
         {
                 rbx = GameGlobals::module_base;           //lea rbx, [0xFFFFFFFFFE034952]
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184129);              //mov r10, [0x00000000081B89F4]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A129);              //mov r10, [0x00000000081B89F4]
                 rcx = r11;              //mov rcx, r11
                 rax = GameGlobals::module_base + 0xDEF0;          //lea rax, [0xFFFFFFFFFE042553]
                 rcx ^= rax;             //xor rcx, rax
@@ -517,7 +513,7 @@ uintptr_t GameDecrypts::decrypt_client_base()
         }
         case 8:
         {
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184129);              //mov r10, [0x00000000081B8551]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A129);              //mov r10, [0x00000000081B8551]
                 rbx = GameGlobals::module_base;           //lea rbx, [0xFFFFFFFFFE034421]
                 rax = 0xFFFFFFFFFFFF597D;               //mov rax, 0xFFFFFFFFFFFF597D
                 rax -= r11;             //sub rax, r11
@@ -551,7 +547,7 @@ uintptr_t GameDecrypts::decrypt_client_base()
         case 9:
         {
                 rbx = GameGlobals::module_base;           //lea rbx, [0xFFFFFFFFFE033FC5]
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184129);              //mov r10, [0x00000000081B8072]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A129);              //mov r10, [0x00000000081B8072]
                 rax = rdx;              //mov rax, rdx
                 rax >>= 0x4;            //shr rax, 0x04
                 rdx ^= rax;             //xor rdx, rax
@@ -586,7 +582,7 @@ uintptr_t GameDecrypts::decrypt_client_base()
         }
         case 10:
         {
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184129);              //mov r10, [0x00000000081B7B9F]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A129);              //mov r10, [0x00000000081B7B9F]
                 rbx = GameGlobals::module_base;           //lea rbx, [0xFFFFFFFFFE033A6F]
                 rax = 0x9332D19135BB918F;               //mov rax, 0x9332D19135BB918F
                 rdx *= rax;             //imul rdx, rax
@@ -628,7 +624,7 @@ uintptr_t GameDecrypts::decrypt_client_base()
         }
         case 11:
         {
-                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184129);               //mov r9, [0x00000000081B764F]
+                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A129);               //mov r9, [0x00000000081B764F]
                 rax = rdx;              //mov rax, rdx
                 rax >>= 0x12;           //shr rax, 0x12
                 rdx ^= rax;             //xor rdx, rax
@@ -665,7 +661,7 @@ uintptr_t GameDecrypts::decrypt_client_base()
         }
         case 12:
         {
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184129);              //mov r10, [0x00000000081B710E]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A129);              //mov r10, [0x00000000081B710E]
                 rdx ^= r11;             //xor rdx, r11
                 rax = GameGlobals::module_base + 0x1BAF;          //lea rax, [0xFFFFFFFFFE034819]
                 rdx ^= rax;             //xor rdx, rax
@@ -698,7 +694,7 @@ uintptr_t GameDecrypts::decrypt_client_base()
         }
         case 13:
         {
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184129);              //mov r10, [0x00000000081B6D16]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A129);              //mov r10, [0x00000000081B6D16]
                 rbx = GameGlobals::module_base;           //lea rbx, [0xFFFFFFFFFE032BE6]
                 rdx += rbx;             //add rdx, rbx
                 rax = rdx;              //mov rax, rdx
@@ -729,7 +725,7 @@ uintptr_t GameDecrypts::decrypt_client_base()
         }
         case 14:
         {
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184129);              //mov r10, [0x00000000081B6889]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A129);              //mov r10, [0x00000000081B6889]
                 rbx = GameGlobals::module_base;           //lea rbx, [0xFFFFFFFFFE03274E]
                 rax = 0x59FC5D34C1D95075;               //mov rax, 0x59FC5D34C1D95075
                 rdx += rax;             //add rdx, rax
@@ -761,7 +757,7 @@ uintptr_t GameDecrypts::decrypt_client_base()
         case 15:
         {
                 rbx = GameGlobals::module_base;           //lea rbx, [0xFFFFFFFFFE0322D0]
-                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184129);               //mov r9, [0x00000000081B6389]
+                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A129);               //mov r9, [0x00000000081B6389]
                 rax = rdx;              //mov rax, rdx
                 rax >>= 0x13;           //shr rax, 0x13
                 rdx ^= rax;             //xor rdx, rax
@@ -801,7 +797,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
 {
         const uint64_t mb = GameGlobals::module_base;
         uint64_t rax = mb, rbx = mb, rcx = mb, rdx = mb, rdi = mb, rsi = mb, r8 = mb, r9 = mb, r10 = mb, r11 = mb, r12 = mb, r13 = mb, r14 = mb, r15 = mb;
-        rax = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xDA89AC8);
+        rax = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xDA2FD48);
         if(!rax)
                 return rax;
         rbx = GameGlobals::process_peb;              //mov rbx, gs:[rcx]
@@ -811,7 +807,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
         switch(rcx) {
         case 0:
         {
-                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184221);               //mov r9, [0x0000000007F81643]
+                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A221);               //mov r9, [0x0000000007F81643]
                 rcx = 0;                //and rcx, 0xFFFFFFFFC0000000
                 rcx = rotl64(rcx, 0x10);               //rol rcx, 0x10
                 rcx ^= r9;              //xor rcx, r9
@@ -845,7 +841,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
         }
         case 1:
         {
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184221);              //mov r10, [0x0000000007F811F4]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A221);              //mov r10, [0x0000000007F811F4]
                 rcx = 0;                //and rcx, 0xFFFFFFFFC0000000
                 rcx = rotl64(rcx, 0x10);               //rol rcx, 0x10
                 rcx ^= r10;             //xor rcx, r10
@@ -875,7 +871,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
         {
                 r14 = GameGlobals::module_base + 0x2281;          //lea r14, [0xFFFFFFFFFDDFEE40]
                 r13 = GameGlobals::module_base + 0x66A0AFC0;              //lea r13, [0x0000000064807B70]
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184221);              //mov r10, [0x0000000007F80D85]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A221);              //mov r10, [0x0000000007F80D85]
                 rdx = r13;              //mov rdx, r13
                 rdx = ~rdx;             //not rdx
                 rdx *= rbx;             //imul rdx, rbx
@@ -910,7 +906,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
         case 3:
         {
                 r13 = GameGlobals::module_base + 0x50F8B6F5;              //lea r13, [0x000000004ED87D3D]
-                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184221);               //mov r9, [0x0000000007F8079F]
+                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A221);               //mov r9, [0x0000000007F8079F]
                 rcx = r13;              //mov rcx, r13
                 rcx = ~rcx;             //not rcx
                 rcx ^= rbx;             //xor rcx, rbx
@@ -944,7 +940,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
         }
         case 4:
         {
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184221);              //mov r10, [0x0000000007F80224]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A221);              //mov r10, [0x0000000007F80224]
                 rcx = 0;                //and rcx, 0xFFFFFFFFC0000000
                 rcx = rotl64(rcx, 0x10);               //rol rcx, 0x10
                 rcx ^= r10;             //xor rcx, r10
@@ -974,7 +970,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
         }
         case 5:
         {
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184221);              //mov r10, [0x0000000007F7FDA4]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A221);              //mov r10, [0x0000000007F7FDA4]
                 rdx = GameGlobals::module_base + 0x661;           //lea rdx, [0xFFFFFFFFFDDFC174]
                 uintptr_t RSP_0x78;
                 RSP_0x78 = 0x19A86082B9386E61;          //mov rcx, 0x19A86082B9386E61 : RSP+0x78
@@ -1006,7 +1002,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
         }
         case 6:
         {
-                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184221);               //mov r9, [0x0000000007F7F885]
+                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A221);               //mov r9, [0x0000000007F7F885]
                 rcx = 0x143119596E0AB6F4;               //mov rcx, 0x143119596E0AB6F4
                 rcx -= rbx;             //sub rcx, rbx
                 rax += rcx;             //add rax, rcx
@@ -1032,7 +1028,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
         }
         case 7:
         {
-                r11 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184221);              //mov r11, [0x0000000007F7F474]
+                r11 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A221);              //mov r11, [0x0000000007F7F474]
                 rdx = GameGlobals::module_base + 0x32D6EFEE;              //lea rdx, [0x0000000030B6A1E7]
                 r8 = 0;                 //and r8, 0xFFFFFFFFC0000000
                 r8 = rotl64(r8, 0x10);                 //rol r8, 0x10
@@ -1073,7 +1069,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
         case 8:
         {
                 r14 = GameGlobals::module_base + 0x98C7;          //lea r14, [0xFFFFFFFFFDE04557]
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184221);              //mov r10, [0x0000000007F7EE53]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A221);              //mov r10, [0x0000000007F7EE53]
                 rcx = GameGlobals::module_base;           //lea rcx, [0xFFFFFFFFFDDFA8A0]
                 rax ^= rcx;             //xor rax, rcx
                 rcx = 0xB9B101CE6C8E2F91;               //mov rcx, 0xB9B101CE6C8E2F91
@@ -1104,7 +1100,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
         }
         case 9:
         {
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184221);              //mov r10, [0x0000000007F7E9F7]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A221);              //mov r10, [0x0000000007F7E9F7]
                 rcx = 0x5C495DB1FF8A0C7D;               //mov rcx, 0x5C495DB1FF8A0C7D
                 rax *= rcx;             //imul rax, rcx
                 rcx = 0;                //and rcx, 0xFFFFFFFFC0000000
@@ -1133,7 +1129,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
         }
         case 10:
         {
-                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184221);               //mov r9, [0x0000000007F7E578]
+                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A221);               //mov r9, [0x0000000007F7E578]
                 rcx = 0x16092956D42CB466;               //mov rcx, 0x16092956D42CB466
                 rax += rcx;             //add rax, rcx
                 rcx = rax;              //mov rcx, rax
@@ -1176,7 +1172,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
         case 11:
         {
                 r13 = GameGlobals::module_base + 0x3E6FD0B3;              //lea r13, [0x000000003C4F6EF1]
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184221);              //mov r10, [0x0000000007F7DFAC]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A221);              //mov r10, [0x0000000007F7DFAC]
                 rcx = rax;              //mov rcx, rax
                 rcx >>= 0x1B;           //shr rcx, 0x1B
                 rax ^= rcx;             //xor rax, rcx
@@ -1210,7 +1206,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
         {
                 rdx = GameGlobals::module_base + 0xF737;          //lea rdx, [0xFFFFFFFFFDE08F62]
                 r13 = GameGlobals::module_base + 0x1124573F;              //lea r13, [0x000000000F03EF4C]
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184221);              //mov r10, [0x0000000007F7D98E]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A221);              //mov r10, [0x0000000007F7D98E]
                 rax += rbx;             //add rax, rbx
                 rcx = rax;              //mov rcx, rax
                 rcx >>= 0x10;           //shr rcx, 0x10
@@ -1243,7 +1239,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
         case 13:
         {
                 r13 = GameGlobals::module_base + 0x5EF7;          //lea r13, [0xFFFFFFFFFDDFF21B]
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184221);              //mov r10, [0x0000000007F7D4EB]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A221);              //mov r10, [0x0000000007F7D4EB]
                 rcx = rax;              //mov rcx, rax
                 rcx >>= 0xA;            //shr rcx, 0x0A
                 rax ^= rcx;             //xor rax, rcx
@@ -1277,7 +1273,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
         {
                 r13 = GameGlobals::module_base + 0x16A6;          //lea r13, [0xFFFFFFFFFDDFA3F5]
                 r14 = GameGlobals::module_base + 0xF57E;          //lea r14, [0xFFFFFFFFFDE082BE]
-                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184221);               //mov r9, [0x0000000007F7CF10]
+                r9 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A221);               //mov r9, [0x0000000007F7CF10]
                 rcx = rbx;              //mov rcx, rbx
                 rcx = ~rcx;             //not rcx
                 rcx *= r14;             //imul rcx, r14
@@ -1310,7 +1306,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
         case 15:
         {
                 r14 = GameGlobals::module_base + 0x31081C40;              //lea r14, [0x000000002EE7A45C]
-                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA184221);              //mov r10, [0x0000000007F7C9DF]
+                r10 = k_memory.ReadNb<uintptr_t>(GameGlobals::module_base + 0xA12A221);              //mov r10, [0x0000000007F7C9DF]
                 rdx = 0;                //and rdx, 0xFFFFFFFFC0000000
                 rdx = rotl64(rdx, 0x10);               //rol rdx, 0x10
                 rcx = rax;              //mov rcx, rax
