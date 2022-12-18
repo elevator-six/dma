@@ -1,5 +1,6 @@
 #include "Game.h"
 #include <thread>
+#include <stdint.h>
 
 extern Memory k_memory;
 
@@ -106,9 +107,6 @@ bool GameFunctions::world_to_screen(const Vector& world_pos, Vector2D* screen_po
 	v_transform.y = v_local.Dot(refdef.view.axis[2]);
 	v_transform.z = v_local.Dot(refdef.view.axis[0]);
 
-	// printf(" Transform.z: %f\n", v_transform.z);
-
-	// make sure it is in front of us
 	if (v_transform.z < 0.01f)
 			return false;
 	screen_pos->x = ((refdef.width / 2) * (1 - (v_transform.x / refdef.view.tan_half_fov.x / v_transform.z)));
@@ -119,6 +117,22 @@ bool GameFunctions::world_to_screen(const Vector& world_pos, Vector2D* screen_po
 	}
 
 	return true;
+}
+
+Vector get_bone_base_pos()
+{
+        return k_memory.ReadNb<Vector>(GameGlobals::client + offsets::bone::bone_base);
+}
+
+Vector GameFunctions::get_bone_position(const Vector& base_pos, const int bone)
+{
+        const uintptr_t bone_ptr = k_memory.ReadNb<uintptr_t>(GameGlobals::c_bone + (bone * offsets::bone::size) + offsets::bone::offset);
+
+        Vector pos = k_memory.ReadNb<Vector>(bone_ptr + ((uint64_t)bone * 0x20) + 0x10);
+        pos.x += base_pos.x;
+        pos.y += base_pos.y;
+        pos.z += base_pos.z;
+        return pos;
 }
 
 nameentry_t GameFunctions::get_name_entry(uint32_t index)
@@ -142,24 +156,21 @@ auto xor_bit(eint64_t v1, eint64_t v2)
 uint64_t GameFunctions::get_ref_def()
 {
 	ref_def_key crypt;
-	// k_memory.Read<ref_def_key>(GameGlobals::module_base + offsets::ref_def_ptr, crypt);
 	uint64_t baseAddr = GameGlobals::module_base;
-	// printf(" Base address: %p\n", GameGlobals::module_base);
-	// printf(" Virtual read crypt: %p\n", crypt);
 
 	k_memory.Read<int>(GameGlobals::module_base + (offsets::ref_def_ptr + 0x00), crypt.ref0);
 	k_memory.Read<int>(GameGlobals::module_base + (offsets::ref_def_ptr + 0x04), crypt.ref1);
 	k_memory.Read<int>(GameGlobals::module_base + (offsets::ref_def_ptr + 0x08), crypt.ref2);
 
-		// REF0: 2052724712
-		// REF1: -683526162
-		// REF2: 1849860978
+                // REF0: 2052724712
+                // REF1: -683526162
+                // REF2: 1849860978
 
 	eint64_t offset1 = baseAddr + offsets::ref_def_ptr;
 	eint64_t offset2 = baseAddr + offsets::ref_def_ptr + 0x4;
 
-	eint64_t bit1 = xor_bit((eint64_t)(crypt.ref2), offset1); // (crypt.ref2 ^ (uint64_t)(baseAddr + offsets::ref_def_ptr))
-	eint64_t bit2 = xor_bit((eint64_t)(crypt.ref2), offset2); // (crypt.ref2 ^ (uint64_t)(baseAddr + offsets::ref_def_ptr + 0x4))
+	eint64_t bit1 = xor_bit((eint64_t)(crypt.ref2), offset1);
+	eint64_t bit2 = xor_bit((eint64_t)(crypt.ref2), offset2);
 
 	eint64_t add_l = bit1 + 2;
 	eint64_t add_u = bit2 + 2;
@@ -167,8 +178,8 @@ uint64_t GameFunctions::get_ref_def()
 	eint64_t final_l = bit1 * add_l;
 	eint64_t final_u = bit2 * add_u;
 
-	DWORD l_bit = (uint32_t)(crypt.ref0) ^ (uint32_t)(final_l); //  
-	eint64_t u_bit = (uint32_t)(crypt.ref1) ^ (uint32_t)(final_u); // 
+	DWORD l_bit = (uint32_t)(crypt.ref0) ^ (uint32_t)(final_l);
+	eint64_t u_bit = (uint32_t)(crypt.ref1) ^ (uint32_t)(final_u);
 
 	return (eint64_t)u_bit << 32 | l_bit;
 }
@@ -792,6 +803,7 @@ uintptr_t GameDecrypts::decrypt_client_base()
                 return rdx;
         }
         }
+        return 0;
 }
 uintptr_t GameDecrypts::decrypt_bone_base()
 {
@@ -1350,4 +1362,88 @@ uintptr_t GameDecrypts::decrypt_bone_base()
                 return rax;
         }
         }
+        return 0;
+}
+
+uint64_t umul128(uint64_t a, uint64_t b, uint64_t *high) {
+  __int128 result = (__int128) a * (__int128) b;
+  *high = (uint64_t) (result >> 64);
+  return (uint64_t) result;
+}
+uint16_t get_bone_index(uint32_t bone_index)
+{
+        const uint64_t mb = GameGlobals::module_base;
+        uint64_t rax = mb, rbx = mb, rcx = mb, rdx = mb, rdi = mb, rsi = mb, r8 = mb, r9 = mb, r10 = mb, r11 = mb, r12 = mb, r13 = mb, r14 = mb, r15 = mb;
+        rdi = bone_index;
+        rcx = rdi * 0x13C8;
+        rax = 0x1B5C5E9652FDACE7;               //mov rax, 0x1B5C5E9652FDACE7
+        rax = umul128(rax, rcx, (uintptr_t*)&rdx);             //mul rcx
+        r11 = GameGlobals::module_base;           //lea r11, [0xFFFFFFFFFD33E478]
+        r10 = 0x19E9C4E0C9861BBD;               //mov r10, 0x19E9C4E0C9861BBD
+        rdx >>= 0xA;            //shr rdx, 0x0A
+        rax = rdx * 0x256D;             //imul rax, rdx, 0x256D
+        rcx -= rax;             //sub rcx, rax
+        rax = 0x4F9FF77A70376427;               //mov rax, 0x4F9FF77A70376427
+        r8 = rcx * 0x256D;              //imul r8, rcx, 0x256D
+        rax = umul128(rax, r8, (uintptr_t*)&rdx);              //mul r8
+        rax = r8;               //mov rax, r8
+        rax -= rdx;             //sub rax, rdx
+        rax >>= 0x1;            //shr rax, 0x01
+        rax += rdx;             //add rax, rdx
+        rax >>= 0xD;            //shr rax, 0x0D
+        rax = rax * 0x30D1;             //imul rax, rax, 0x30D1
+        r8 -= rax;              //sub r8, rax
+        rax = 0x70381C0E070381C1;               //mov rax, 0x70381C0E070381C1
+        rax = umul128(rax, r8, (uintptr_t*)&rdx);              //mul r8
+        rax = 0x624DD2F1A9FBE77;                //mov rax, 0x624DD2F1A9FBE77
+        rdx >>= 0x6;            //shr rdx, 0x06
+        rcx = rdx * 0x92;               //imul rcx, rdx, 0x92
+        rax = umul128(rax, r8, (uintptr_t*)&rdx);              //mul r8
+        rax = r8;               //mov rax, r8
+        rax -= rdx;             //sub rax, rdx
+        rax >>= 0x1;            //shr rax, 0x01
+        rax += rdx;             //add rax, rdx
+        rax >>= 0x6;            //shr rax, 0x06
+        rcx += rax;             //add rcx, rax
+        rax = rcx * 0xFA;               //imul rax, rcx, 0xFA
+        rcx = r8 * 0xFC;                //imul rcx, r8, 0xFC
+        rcx -= rax;             //sub rcx, rax
+        rax = k_memory.ReadNb<uint16_t>(rcx + r11 * 1 + 0xA96D930);                //movzx eax, word ptr [rcx+r11*1+0xA96D930]
+        r8 = rax * 0x13C8;              //imul r8, rax, 0x13C8
+        rax = r10;              //mov rax, r10
+        rax = umul128(rax, r8, (uintptr_t*)&rdx);              //mul r8
+        rcx = r8;               //mov rcx, r8
+        rax = r10;              //mov rax, r10
+        rcx -= rdx;             //sub rcx, rdx
+        rcx >>= 0x1;            //shr rcx, 0x01
+        rcx += rdx;             //add rcx, rdx
+        rcx >>= 0xC;            //shr rcx, 0x0C
+        rcx = rcx * 0x1D0F;             //imul rcx, rcx, 0x1D0F
+        r8 -= rcx;              //sub r8, rcx
+        r9 = r8 * 0x3981;               //imul r9, r8, 0x3981
+        rax = umul128(rax, r9, (uintptr_t*)&rdx);              //mul r9
+        rax = r9;               //mov rax, r9
+        rax -= rdx;             //sub rax, rdx
+        rax >>= 0x1;            //shr rax, 0x01
+        rax += rdx;             //add rax, rdx
+        rax >>= 0xC;            //shr rax, 0x0C
+        rax = rax * 0x1D0F;             //imul rax, rax, 0x1D0F
+        r9 -= rax;              //sub r9, rax
+        rax = 0xD79435E50D79435F;               //mov rax, 0xD79435E50D79435F
+        rax = umul128(rax, r9, (uintptr_t*)&rdx);              //mul r9
+        rax = 0xA6810A6810A6811;                //mov rax, 0xA6810A6810A6811
+        rdx >>= 0x6;            //shr rdx, 0x06
+        rcx = rdx * 0x4C;               //imul rcx, rdx, 0x4C
+        rax = umul128(rax, r9, (uintptr_t*)&rdx);              //mul r9
+        rax = r9;               //mov rax, r9
+        rax -= rdx;             //sub rax, rdx
+        rax >>= 0x1;            //shr rax, 0x01
+        rax += rdx;             //add rax, rdx
+        rax >>= 0x6;            //shr rax, 0x06
+        rcx += rax;             //add rcx, rax
+        rax = rcx * 0xF6;               //imul rax, rcx, 0xF6
+        rcx = r9 * 0xF8;                //imul rcx, r9, 0xF8
+        rcx -= rax;             //sub rcx, rax
+        r15 = k_memory.ReadNb<uint16_t>(rcx + r11 * 1 + 0xA9767D0);                //movsx r15d, word ptr [rcx+r11*1+0xA9767D0]
+        return r15;
 }

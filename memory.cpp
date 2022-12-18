@@ -1,54 +1,5 @@
 #include "memory.h"
 
-//Credits: learn_more, stevemk14ebr
-size_t findPattern(const PBYTE rangeStart, size_t len, const char* pattern)
-{
-	size_t l = strlen(pattern);
-	PBYTE patt_base = static_cast<PBYTE>(malloc(l >> 1));
-	PBYTE msk_base = static_cast<PBYTE>(malloc(l >> 1));
-	PBYTE pat = patt_base;
-	PBYTE msk = msk_base;
-	if (pat && msk)
-	{
-		l = 0;
-		while (*pattern)
-		{
-			if (*pattern == ' ')
-				pattern++;
-			if (!*pattern)
-				break;
-			if (*(PBYTE)pattern == (BYTE)'\?')
-			{
-				*pat++ = 0;
-				*msk++ = '?';
-				pattern += ((*(PWORD)pattern == (WORD)'\?\?') ? 2 : 1);
-			}
-			else
-			{
-				*pat++ = getByte(pattern);
-				*msk++ = 'x';
-				pattern += 2;
-			}
-			l++;
-		}
-		*msk = 0;
-		pat = patt_base;
-		msk = msk_base;
-		for (size_t n = 0; n < (len - l); ++n)
-		{
-			if (isMatch(rangeStart + n, patt_base, msk_base))
-			{
-				free(patt_base);
-				free(msk_base);
-				return n;
-			}
-		}
-		free(patt_base);
-		free(msk_base);
-	}
-	return -1;
-}
-
 uint64_t Memory::get_proc_baseaddr()
 {
 	return proc.baseaddr;
@@ -183,7 +134,6 @@ void Memory::load_proc_info(const char* name)
 				char local_name[32];
 				os_process_info_name(info, local_name, 32);
 
-				// local_name[0] == name[0] && local_name[1] == name[1] && local_name[2] == name[2] && local_name[3] == name[3] && local_name[4] == name[4] && local_name[5] >
 				if (local_name[0] == name[0] && local_name[1] == name[1] && local_name[2] == name[2] && local_name[3] == name[3] && local_name[4] == name[4] && local_name[5])
 				{
 						printf(" Process info found!\n");

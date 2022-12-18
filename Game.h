@@ -1,4 +1,4 @@
-#include "Math.h"
+#include "vector.h"
 #include "offsets.h"
 #include "memory.h"
 
@@ -48,7 +48,8 @@ namespace GameFunctions
 	int local_index();
 	Vector camera_position();
 	bool world_to_screen(const Vector& world_pos, Vector2D* screen_pos);
-	bool t__world_to_screen(const Vector& world_pos, Vector2D* screen_pos);
+	Vector get_bone_base_pos();
+	Vector get_bone_position(const Vector& base_pos, const int bone);
 	nameentry_t get_name_entry(uint32_t index);
 
 	uint64_t get_client_info();

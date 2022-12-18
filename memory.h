@@ -4,33 +4,24 @@
 #include <stdio.h>
 #include <mutex>
 
-#define INRANGE(x,a,b)		(x >= a && x <= b) 
-#define getBits( x )		(INRANGE(x,'0','9') ? (x - '0') : ((x&(~0x20)) - 'A' + 0xa))
-#define getByte( x )		(getBits(x[0]) << 4 | getBits(x[1]))
+/* FOR PATTERN SCANNER */
+#include <vector>
+#include <memory>
+#include <sstream>
+#include <optional>
 
-typedef uint8_t* PBYTE;
-typedef uint8_t BYTE;
+typedef void* LPVOID;
+/* =================== */
+
+/* =================== */
 typedef unsigned long DWORD;
-typedef unsigned short WORD;
-typedef WORD *PWORD;
+typedef uint8_t BYTE;
+/* =================== */
 
+/* =================== */
 static CloneablePhysicalMemoryObj *conn = 0;
 static Kernel *kernel = 0;
-
-inline bool isMatch(const PBYTE addr, const PBYTE pat, const PBYTE msk)
-{
-	size_t n = 0;
-	while (addr[n] == pat[n] || msk[n] == (BYTE)'?')
-	{
-		if (!msk[++n])
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
-size_t findPattern(const PBYTE rangeStart, size_t len, const char* pattern);
+/* =================== */
 
 typedef struct Process
 {
@@ -84,6 +75,8 @@ public:
 
 	void load_proc_info(const char* name);
 
+	bool ReadSized(uint64_t address, LPVOID out, size_t size);
+
 	template<typename T>
 	bool Read(uint64_t address, T& out);
 
@@ -100,14 +93,91 @@ public:
 	bool WriteArray(uint64_t address, const T value[], size_t len);
 
 	uint64_t ScanPointer(uint64_t ptr_address, const uint32_t offsets[], int level);
+
+	class signature
+	{
+		uintptr_t m_base;
+		size_t m_size;
+		std::unique_ptr<char[]> m_data;
+		uintptr_t m_temp;
+	public:
+		signature(Memory& outter)
+		{
+			m_base = (uintptr_t)outter.proc.baseaddr;
+			m_size = outter.proc.modulesize;
+			m_data = std::make_unique<char[]>(m_size);
+			outter.ReadSized(m_base, m_data.get(), m_size);
+
+			m_temp = m_base;
+		}
+
+		~signature()
+		{
+			m_data.reset();
+		}
+
+		signature& scan(std::string pattern)
+		{
+			m_temp = 0;
+
+			std::stringstream ss(pattern);
+			std::vector<std::string> substrings;
+			std::string substring;
+			while (std::getline(ss, substring, ' ')) substrings.push_back(substring);;
+
+			std::vector<std::optional<char>> pattern_2;
+			for (auto& str : substrings)
+			{
+				if (str == "?" || str == "??")
+					pattern_2.push_back(std::nullopt);
+				else
+					pattern_2.push_back(strtol(str.c_str(), nullptr, 16));
+			}
+
+			for (size_t i = 0; i < m_size - pattern_2.size() + 1; i++)
+			{
+				size_t j;
+				for (j = 0; j < pattern_2.size(); j++)
+				{
+					if (!pattern_2[j].has_value())
+						continue;
+					if (pattern_2[j].value() != m_data.get()[i + j])
+						break;
+				}
+				if (j == pattern_2.size())
+				{
+					m_temp = m_base + i;
+					return *this;
+				}
+			}
+			return *this;
+		}
+
+		signature& add(int value) { m_temp += value; return *this; }
+
+		signature& sub(int value) { m_temp -= value; return *this; }
+
+		signature& rip(Memory& outter)
+		{
+			int value;
+			outter.Read<int>(m_temp, value);
+			m_temp += value + 4;
+			return *this;
+		}
+
+		template<typename T> T as() { return (T)m_temp; }
+	};
 };
+
+inline bool Memory::ReadSized(uint64_t address, LPVOID out, size_t size)
+{
+	std::lock_guard<std::mutex> l(m);
+	return virt_read_raw_into(mem, address, (uint8_t*)&out, size) == 0;
+}
 
 template<typename T>
 inline bool Memory::Read(uint64_t address, T& out)
 {
-	// if (sizeof(T) == 12 || sizeof(T) == 0xC)
-	// 	printf(" Size of T: %d", sizeof(T));
-
 	std::lock_guard<std::mutex> l(m);
 	return mem && virt_read_raw_into(mem, address, (uint8_t*)&out, sizeof(T)) == 0;
 }

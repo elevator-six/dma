@@ -11,8 +11,8 @@ $(shell cp memflow_lib/memflow-qemu-procfs/target/release/libmemflow_qemu_procfs
 %.o: %.cpp
 	$(CXX) -c -o $(OBJDIR)/$@ $< $(CXXFLAGS)
 
-cod_dma: cod_dma.o Game.o Math.o memory.o
-	$(CXX) -o $(OUTDIR)/$@ $(OBJDIR)/cod_dma.o $(OBJDIR)/Game.o $(OBJDIR)/Math.o $(OBJDIR)/memory.o $(CXXFLAGS) $(LIBS)
+cod_dma: cod_dma.o Game.o memory.o
+	$(CXX) -o $(OUTDIR)/$@ $(OBJDIR)/cod_dma.o $(OBJDIR)/Game.o $(OBJDIR)/memory.o $(CXXFLAGS) $(LIBS)
 
 .PHONY: all
 all: cod_dma
