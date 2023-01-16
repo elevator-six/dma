@@ -39,7 +39,7 @@ public:
 
 	bool is_valid();
 	bool is_dead();
-	int team_id();
+	uint16_t team_id();
 	Vector get_pos();
 };
 
