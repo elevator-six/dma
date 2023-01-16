@@ -123,7 +123,7 @@ static void EspLoop()
 				if (!entity.is_valid() || entity.is_dead())
 					continue;
 
-				int local_team = local.team_id();
+				uint16_t local_team = local.team_id();
 				if (entity.team_id() == local_team)
 					continue;
 
@@ -146,7 +146,7 @@ static void EspLoop()
 					players[i] = 
 					{
 						dist,
-						entity.team_id(),
+						(int)(entity.team_id()),
 						boxMiddle,
 						hs.y,
 						width,
