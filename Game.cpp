@@ -775,7 +775,7 @@ uintptr_t GameDecrypts::decrypt_bone_base()
         return rax;
     rbx = ~GameGlobals::process_peb;              //mov rbx, gs:[rcx]
     rcx = rbx;              //mov rcx, rbx
-    rcx = 0x0//_rotr64(rcx, 0x17);               //ror rcx, 0x17
+    rcx = 0x0;//_rotr64(rcx, 0x17);               //ror rcx, 0x17
     rcx &= 0xF;
     switch (rcx) {
     case 0:
