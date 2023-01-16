@@ -206,10 +206,10 @@ bool player_t::is_dead()
 	return dead1 || dead2;
 }
 
-int player_t::team_id()
+uint16_t player_t::team_id()
 {
-	int ret;
-	k_memory.Read<int>(address + offsets::player::team, ret);
+	uint16_t ret;
+	k_memory.Read<uint16_t>(address + offsets::player::team, ret);
 	return ret;
 }
 
